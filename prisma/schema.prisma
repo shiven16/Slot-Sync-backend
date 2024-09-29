@@ -1,0 +1,66 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  username       String          @unique
+  email          String          @unique
+  password_hash  String
+  role           String          // 'admin', 'user', 'provider'
+  bookings       Booking[]
+  notifications  Notification[]
+  providers      ServiceProvider[] // If a user can also be a service provider
+}
+
+model ServiceProvider {
+  id             Int             @id @default(autoincrement())
+  userId         Int             @unique
+  service_type   String          // 'doctor', 'hotel'
+  location       String
+  contact_number String
+  availability   Availability[]
+  bookings       Booking[]
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Booking {
+  id             Int             @id @default(autoincrement())
+  userId         Int
+  providerId     Int
+  booking_date   DateTime
+  booking_time   DateTime
+  status         String          // 'confirmed', 'cancelled'
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  notifications  Notification[]  // Added this to create a bidirectional relation to Notification
+}
+
+model Availability {
+  id             Int             @id @default(autoincrement())
+  providerId     Int
+  available_date DateTime
+  start_time     DateTime
+  end_time       DateTime
+
+  provider       ServiceProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id             Int             @id @default(autoincrement())
+  userId         Int
+  bookingId      Int
+  notification_type String       // 'email', 'sms'
+  message        String
+  sent_at        DateTime
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking        Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
